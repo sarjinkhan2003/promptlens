@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PromptLens</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #e0e0e0;
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: #12122a;
+      border-right: 1px solid #2a2a4a;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid #2a2a4a;
+    }
+    .sidebar-header h2 {
+      font-size: 1.1rem;
+      background: linear-gradient(90deg, #7b61ff, #00d4ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+    .new-chat-btn {
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(90deg, #7b61ff, #00d4ff);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .search-box {
+      width: 100%;
+      padding: 8px 12px;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.85rem;
+      outline: none;
+    }
+    .search-box:focus { border-color: #7b61ff; }
+    .chat-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .chat-group-label {
+      font-size: 0.72rem;
+      color: #555;
+      padding: 8px 8px 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .chat-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+      transition: background 0.15s;
+    }
+    .chat-item:hover { background: #1a1a3a; }
+    .chat-item.active { background: #2a2a4a; }
+    .chat-item-title {
+      font-size: 0.85rem;
+      color: #ccc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+    .chat-item-delete {
+      background: none;
+      border: none;
+      color: #555;
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 2px 4px;
+      border-radius: 4px;
+      display: none;
+    }
+    .chat-item:hover .chat-item-delete { display: block; }
+    .chat-item-delete:hover { color: #ff6b6b; background: #2a1a1a; }
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid #2a2a4a;
+      font-size: 0.75rem;
+      color: #444;
+      text-align: center;
+    }
+
+    /* MAIN AREA */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .main-header {
+      padding: 12px 20px;
+      border-bottom: 1px solid #2a2a4a;
+      background: #12122a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .main-header h3 {
+      font-size: 0.95rem;
+      color: #888;
+      max-width: 500px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .welcome-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #444;
+      text-align: center;
+      gap: 12px;
+    }
+    .welcome-screen h2 {
+      font-size: 1.8rem;
+      background: linear-gradient(90deg, #7b61ff, #00d4ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .welcome-screen p { font-size: 0.95rem; color: #555; }
+    .suggestion-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 16px;
+    }
+    .chip {
+      padding: 8px 16px;
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      color: #888;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .chip:hover {
+      border-color: #7b61ff;
+      color: #ccc;
+      background: #1a1a3a;
+    }
+    .message-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-width: 780px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .bubble {
+      padding: 14px 18px;
+      border-radius: 16px;
+      line-height: 1.7;
+      font-size: 0.95rem;
+    }
+    .bubble.user {
+      background: linear-gradient(135deg, #7b61ff, #5a45cc);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+      max-width: 70%;
+    }
+    .bubble.assistant {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      color: #ccc;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    .bubble.assistant strong { color: #fff; }
+    .analytics-btn {
+      align-self: flex-start;
+      background: none;
+      border: 1px solid #7b61ff44;
+      color: #7b61ff;
+      padding: 4px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: all 0.2s;
+    }
+    .analytics-btn:hover {
+      background: #7b61ff22;
+      border-color: #7b61ff;
+    }
+    .analytics-panel {
+      display: none;
+      background: #12122a;
+      border: 1px solid #2a2a4a;
+      border-radius: 12px;
+      padding: 14px;
+      max-width: 460px;
+    }
+    .analytics-panel.open { display: block; }
+    .lit-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 0.82rem;
+      color: #888;
+    }
+    .lit-badge {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+    .beginner { background: #3a1a1a; color: #ff6b6b; }
+    .intermediate { background: #3a2e1a; color: #ffd93d; }
+    .expert { background: #1a3a2e; color: #6bcb77; }
+    .unknown { background: #2a2a2a; color: #aaa; }
+    .score-section { font-size: 0.82rem; color: #888; margin-bottom: 8px; }
+    .score-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 0.82rem;
+    }
+    .score-label { width: 90px; color: #aaa; }
+    .mini-bar {
+      flex: 1;
+      height: 5px;
+      background: #2a2a4a;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .mini-fill {
+      height: 5px;
+      background: linear-gradient(90deg, #7b61ff, #00d4ff);
+      border-radius: 10px;
+      transition: width 0.8s ease;
+    }
+    .score-val { width: 30px; color: #666; font-size: 0.78rem; }
+    .tip-mini {
+      margin-top: 8px;
+      padding: 7px 10px;
+      background: #1a1a3a;
+      border-radius: 6px;
+      border-left: 2px solid #7b61ff;
+      font-size: 0.8rem;
+      color: #888;
+    }
+    .mismatch-inline {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #2a2a4a;
+      font-size: 0.82rem;
+    }
+    .ok { color: #6bcb77; }
+    .warn { color: #ff6b6b; }
+    .sugg { margin-top: 6px; padding: 6px 8px; background: #2a1a1a; border-radius: 6px; color: #ffaaaa; font-size: 0.8rem; }
+    .typing-indicator {
+      display: none;
+      padding: 12px 16px;
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 16px;
+      border-bottom-left-radius: 4px;
+      color: #555;
+      font-size: 0.9rem;
+      align-self: flex-start;
+      max-width: 780px;
+      width: 100%;
+      margin: 0 auto;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .input-area {
+      padding: 16px 20px;
+      border-top: 1px solid #2a2a4a;
+      background: #12122a;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+      max-width: 780px;
+      margin: 0 auto;
+    }
+    .input-row input {
+      flex: 1;
+      padding: 13px 18px;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 24px;
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .input-row input:focus { border-color: #7b61ff; }
+    .input-row button {
+      padding: 13px 22px;
+      background: linear-gradient(90deg, #7b61ff, #00d4ff);
+      border: none;
+      border-radius: 24px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .input-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h2>🔍 PromptLens</h2>
+    <button class="new-chat-btn" onclick="newChat()">+ New Chat</button>
+    <input class="search-box" id="searchBox"
+      placeholder="🔍 Search chats..."
+      oninput="searchChats(this.value)" />
+  </div>
+  <div class="chat-list" id="chatList"></div>
+  <div class="sidebar-footer">
+    Real-Time Prompt Transparency
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="main-header">
+    <h3 id="chatTitle">New Chat</h3>
+    <span style="font-size:0.78rem;color:#444;" id="msgCount"></span>
+  </div>
+
+  <div class="chat-area" id="chatArea">
+    <div class="welcome-screen" id="welcomeScreen">
+      <h2>PromptLens</h2>
+      <p>Real-Time Prompt Transparency for Non-Technical Users</p>
+      <div class="suggestion-chips">
+        <div class="chip" onclick="useChip(this)">What is artificial intelligence?</div>
+        <div class="chip" onclick="useChip(this)">Explain machine learning simply</div>
+        <div class="chip" onclick="useChip(this)">What is climate change?</div>
+        <div class="chip" onclick="useChip(this)">tell me something interesting</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="typing-indicator" id="typingIndicator">
+    ⏳ Analyzing your prompt...
+  </div>
+
+  <div class="input-area">
+    <div class="input-row">
+      <input type="text" id="userInput"
+        placeholder="Ask anything..."
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey) sendMessage()" />
+      <button id="sendBtn" onclick="sendMessage()">Send →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const WEBHOOK = "https://saumyadip404.app.n8n.cloud/webhook/promptlens";
+
+// State
+let chats = JSON.parse(localStorage.getItem('pl_chats') || '{}');
+let currentChatId = null;
+let msgCounter = 0;
+
+// Init
+window.onload = () => {
+  renderChatList();
+  if (Object.keys(chats).length === 0) newChat();
+  else {
+    const last = Object.keys(chats).sort((a,b) => chats[b].updatedAt - chats[a].updatedAt)[0];
+    loadChat(last);
+  }
+};
+
+function genId() { return 'chat_' + Date.now(); }
+
+function saveChats() {
+  localStorage.setItem('pl_chats', JSON.stringify(chats));
+}
+
+function newChat() {
+  const id = genId();
+  chats[id] = {
+    id,
+    title: 'New Chat',
+    messages: [],
+    history: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+  saveChats();
+  loadChat(id);
+  renderChatList();
+}
+
+function loadChat(id) {
+  currentChatId = id;
+  const chat = chats[id];
+  msgCounter = 0;
+
+  // Update header
+  document.getElementById('chatTitle').innerText = chat.title;
+  document.getElementById('msgCount').innerText =
+    chat.messages.length > 0 ? chat.messages.length + ' messages' : '';
+
+  // Clear chat area
+  const area = document.getElementById('chatArea');
+  area.innerHTML = '';
+
+  if (chat.messages.length === 0) {
+    area.innerHTML = `
+      <div class="welcome-screen" id="welcomeScreen">
+        <h2>PromptLens</h2>
+        <p>Real-Time Prompt Transparency for Non-Technical Users</p>
+        <div class="suggestion-chips">
+          <div class="chip" onclick="useChip(this)">What is artificial intelligence?</div>
+          <div class="chip" onclick="useChip(this)">Explain machine learning simply</div>
+          <div class="chip" onclick="useChip(this)">What is climate change?</div>
+          <div class="chip" onclick="useChip(this)">tell me something interesting</div>
+        </div>
+      </div>`;
+  } else {
+    chat.messages.forEach(msg => renderMessage(msg, false));
+  }
+
+  renderChatList();
+  area.scrollTop = area.scrollHeight;
+}
+
+function deleteChat(id, e) {
+  e.stopPropagation();
+  delete chats[id];
+  saveChats();
+  if (currentChatId === id) {
+    if (Object.keys(chats).length === 0) newChat();
+    else {
+      const first = Object.keys(chats).sort((a,b) => chats[b].updatedAt - chats[a].updatedAt)[0];
+      loadChat(first);
+    }
+  }
+  renderChatList();
+}
+
+function renderChatList(filter = '') {
+  const list = document.getElementById('chatList');
+  const sorted = Object.values(chats)
+    .filter(c => c.title.toLowerCase().includes(filter.toLowerCase()))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+
+  if (sorted.length === 0) {
+    list.innerHTML = '<div style="padding:16px;color:#444;font-size:0.82rem;text-align:center">No chats found</div>';
+    return;
+  }
+
+  const now = Date.now();
+  const today = new Date().setHours(0,0,0,0);
+  const yesterday = today - 86400000;
+
+  let html = '';
+  let shownToday = false, shownYesterday = false, shownOlder = false;
+
+  sorted.forEach(chat => {
+    const d = chat.updatedAt;
+    if (d >= today && !shownToday) { html += `<div class="chat-group-label">Today</div>`; shownToday = true; }
+    else if (d >= yesterday && d < today && !shownYesterday) { html += `<div class="chat-group-label">Yesterday</div>`; shownYesterday = true; }
+    else if (d < yesterday && !shownOlder) { html += `<div class="chat-group-label">Older</div>`; shownOlder = true; }
+
+    html += `
+      <div class="chat-item ${chat.id === currentChatId ? 'active' : ''}"
+        onclick="loadChat('${chat.id}')">
+        <span class="chat-item-title">${chat.title}</span>
+        <button class="chat-item-delete"
+          onclick="deleteChat('${chat.id}', event)">🗑</button>
+      </div>`;
+  });
+
+  list.innerHTML = html;
+}
+
+function searchChats(q) { renderChatList(q); }
+
+function useChip(el) {
+  document.getElementById('userInput').value = el.innerText;
+  sendMessage();
+}
+
+function cleanMD(text) {
+  return (text || '')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+}
+
+function safeJSON(str) {
+  if (typeof str === 'object') return str;
+  try { return JSON.parse(str.replace(/```json|```/g,'').trim()); }
+  catch { return null; }
+}
+
+function renderMessage(msg, animate = true) {
+  const area = document.getElementById('chatArea');
+  const id = ++msgCounter;
+  const div = document.createElement('div');
+  div.className = 'message-group';
+
+  if (msg.role === 'user') {
+    div.innerHTML = `<div class="bubble user">${msg.content}</div>`;
+  } else {
+    const lit = msg.literacy || 'UNKNOWN';
+    const s = safeJSON(msg.scores);
+    const m = safeJSON(msg.mismatch);
+
+    const mismatchHTML = m
+      ? m.mismatch
+        ? `<div class="mismatch-inline">
+             <span class="warn">⚠️ ${m.reason}</span>
+             <div class="sugg">✏️ ${m.suggestion}</div>
+           </div>`
+        : `<div class="mismatch-inline"><span class="ok">✅ Prompt aligns well</span></div>`
+      : '';
+
+    const scoresHTML = s && s.clarity !== undefined ? `
+      <div class="score-section">📊 Prompt Quality</div>
+      <div class="score-row">
+        <span class="score-label">Clarity</span>
+        <div class="mini-bar"><div class="mini-fill" style="width:${s.clarity*10}%"></div></div>
+        <span class="score-val">${s.clarity}/10</span>
+      </div>
+      <div class="score-row">
+        <span class="score-label">Specificity</span>
+        <div class="mini-bar"><div class="mini-fill" style="width:${s.specificity*10}%"></div></div>
+        <span class="score-val">${s.specificity}/10</span>
+      </div>
+      <div class="score-row">
+        <span class="score-label">Completeness</span>
+        <div class="mini-bar"><div class="mini-fill" style="width:${s.completeness*10}%"></div></div>
+        <span class="score-val">${s.completeness}/10</span>
+      </div>
+      ${s.tip ? `<div class="tip-mini">💡 ${s.tip}</div>` : ''}
+    ` : '';
+
+    div.innerHTML = `
+      <div class="bubble assistant">${cleanMD(msg.content)}${mismatchHTML}</div>
+      <button class="analytics-btn" id="abtn_${id}"
+        onclick="toggleA(${id})">💡 Analytics</button>
+      <div class="analytics-panel" id="apanel_${id}">
+        <div class="lit-row">
+          Literacy Level:
+          <span class="lit-badge ${lit.toLowerCase()}">${lit}</span>
+        </div>
+        ${scoresHTML}
+      </div>`;
+  }
+
+  area.appendChild(div);
+  if (animate) area.scrollTop = area.scrollHeight;
+}
+
+function toggleA(id) {
+  const panel = document.getElementById('apanel_' + id);
+  const btn = document.getElementById('abtn_' + id);
+  const open = panel.classList.toggle('open');
+  btn.innerText = open ? '✕ Hide' : '💡 Analytics';
+}
+
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const prompt = input.value.trim();
+  if (!prompt || !currentChatId) return;
+
+  const chat = chats[currentChatId];
+
+  // Remove welcome screen
+  const ws = document.getElementById('welcomeScreen');
+  if (ws) ws.remove();
+
+  input.value = '';
+  document.getElementById('sendBtn').disabled = true;
+
+  // Add user message
+  const userMsg = { role: 'user', content: prompt };
+  chat.messages.push(userMsg);
+  renderMessage(userMsg);
+
+  // Auto-title from first message
+  if (chat.messages.length === 1) {
+    chat.title = prompt.length > 35 ? prompt.substring(0, 35) + '...' : prompt;
+    document.getElementById('chatTitle').innerText = chat.title;
+  }
+
+  // Show typing
+  document.getElementById('typingIndicator').style.display = 'block';
+
+  try {
+    const res = await fetch(WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userPrompt: prompt,
+        history: JSON.stringify(chat.history)
+      })
+    });
+
+    const rawText = await res.text();
+    let data = JSON.parse(rawText);
+    if (Array.isArray(data)) data = data[0];
+
+    const answer = data.answer || 'No answer received.';
+    const lit = (() => {
+      const raw = (data.literacy || '').toString();
+      const m = raw.match(/BEGINNER|INTERMEDIATE|EXPERT/i);
+      return m ? m[0].toUpperCase() : 'UNKNOWN';
+    })();
+
+    // Update history for context
+    chat.history.push({ role: 'user', content: prompt });
+    chat.history.push({ role: 'assistant', content: answer });
+
+    // Keep history to last 10 messages to avoid token limits
+    if (chat.history.length > 10) chat.history = chat.history.slice(-10);
+
+    // Save assistant message with analytics
+    const assistantMsg = {
+      role: 'assistant',
+      content: answer,
+      literacy: lit,
+      scores: data.scores,
+      mismatch: data.mismatch
+    };
+    chat.messages.push(assistantMsg);
+    chat.updatedAt = Date.now();
+
+    saveChats();
+    renderMessage(assistantMsg);
+    renderChatList();
+
+    // Update header
+    document.getElementById('msgCount').innerText = chat.messages.length + ' messages';
+
+  } catch (err) {
+    const errMsg = { role: 'assistant', content: '❌ Error: ' + err.message };
+    chat.messages.push(errMsg);
+    renderMessage(errMsg);
+    saveChats();
+  } finally {
+    document.getElementById('typingIndicator').style.display = 'none';
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('chatArea').scrollTop = 99999;
+  }
+}
+</script>
+</body>
+</html>
